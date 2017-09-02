@@ -10,18 +10,16 @@ import (
 	"net/http"
 
 	"github.com/alexellis/faas/gateway/requests"
-	"github.com/gorilla/mux"
 	"github.com/kenfdev/faas-rancher/rancher"
 	"github.com/kenfdev/faas-rancher/types"
 )
 
 // MakeReplicaUpdater updates desired count of replicas
-func MakeReplicaUpdater(client *rancher.Client) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func MakeReplicaUpdater(client *rancher.Client) VarsHandler {
+	return func(w http.ResponseWriter, r *http.Request, vars map[string]string) {
 
 		log.Println("Update replicas")
 
-		vars := mux.Vars(r)
 		functionName := vars["name"]
 
 		req := types.ScaleServiceRequest{}
@@ -59,12 +57,11 @@ func MakeReplicaUpdater(client *rancher.Client) http.HandlerFunc {
 }
 
 // MakeReplicaReader reads the amount of replicas for a deployment
-func MakeReplicaReader(client *rancher.Client) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func MakeReplicaReader(client *rancher.Client) VarsHandler {
+	return func(w http.ResponseWriter, r *http.Request, vars map[string]string) {
 
 		log.Println("Read replicas")
 
-		vars := mux.Vars(r)
 		functionName := vars["name"]
 
 		functions, err := getServiceList(client)

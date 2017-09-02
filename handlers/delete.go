@@ -13,8 +13,8 @@ import (
 )
 
 // MakeDeleteHandler delete a function
-func MakeDeleteHandler(client *rancher.Client) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func MakeDeleteHandler(client *rancher.Client) VarsHandler {
+	return func(w http.ResponseWriter, r *http.Request, vars map[string]string) {
 
 		defer r.Body.Close()
 

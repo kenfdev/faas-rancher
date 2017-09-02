@@ -15,6 +15,11 @@ import (
 	"github.com/kenfdev/faas-rancher/rancher"
 )
 
+const (
+	// TimeoutSeconds seconds untile timeout for http client
+	TimeoutSeconds = 2
+)
+
 func main() {
 	functionStackName := os.Getenv("FUNCTION_STACK_NAME")
 	cattleURL := os.Getenv("CATTLE_URL")
@@ -31,22 +36,25 @@ func main() {
 		panic(err.Error())
 	}
 
-	// creates the rancher REST client
-	client, err := rancher.NewClientForConfig(config)
+	// create the rancher REST client
+	httpClient := http.Client{
+		Timeout: time.Second * TimeoutSeconds,
+	}
+	rancherClient, err := rancher.NewClientForConfig(config, &httpClient)
 	if err != nil {
 		panic(err.Error())
 	}
 
 	r := mux.NewRouter()
 
-	r.HandleFunc("/system/functions", handlers.MakeFunctionReader(client)).Methods("GET")
-	r.HandleFunc("/system/functions", handlers.MakeDeployHandler(client)).Methods("POST")
-	r.HandleFunc("/system/functions", handlers.MakeDeleteHandler(client)).Methods("DELETE")
+	r.HandleFunc("/system/functions", handlers.MakeFunctionReader(rancherClient).ServeHTTP).Methods("GET")
+	r.HandleFunc("/system/functions", handlers.MakeDeployHandler(rancherClient).ServeHTTP).Methods("POST")
+	r.HandleFunc("/system/functions", handlers.MakeDeleteHandler(rancherClient).ServeHTTP).Methods("DELETE")
 
-	r.HandleFunc("/system/function/{name:[-a-zA-Z_0-9]+}", handlers.MakeReplicaReader(client)).Methods("GET")
-	r.HandleFunc("/system/scale-function/{name:[-a-zA-Z_0-9]+}", handlers.MakeReplicaUpdater(client)).Methods("POST")
+	r.HandleFunc("/system/function/{name:[-a-zA-Z_0-9]+}", handlers.MakeReplicaReader(rancherClient).ServeHTTP).Methods("GET")
+	r.HandleFunc("/system/scale-function/{name:[-a-zA-Z_0-9]+}", handlers.MakeReplicaUpdater(rancherClient).ServeHTTP).Methods("POST")
 
-	functionProxy := handlers.MakeProxy(config.FunctionsStackName)
+	functionProxy := handlers.MakeProxy(config.FunctionsStackName).ServeHTTP
 	r.HandleFunc("/function/{name:[-a-zA-Z_0-9]+}", functionProxy)
 	r.HandleFunc("/function/{name:[-a-zA-Z_0-9]+}/", functionProxy)
 

@@ -7,47 +7,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
 )
 
-// Client is the REST client type
-type Client struct {
-	config           *Config
-	functionsStackID string
-}
-
-// Stack refers to rancher's stack
-type Stack struct {
-	ID string `json:"id"`
-}
-
-// LaunchConfig refers to the rancher service's launch config
-type LaunchConfig struct {
-	Environment   map[string]string `json:"environment"`
-	Labels        map[string]string `json:"labels"`
-	RestartPolicy map[string]string `json:"restartPolicy"`
-	ImageUUID     string            `json:"imageUuid"`
-}
-
-// Service refers to rancher's Service
-type Service struct {
-	ID            string        `json:"id"`
-	StackID       string        `json:"stackId"`
-	StartOnCreate bool          `json:"startOnCreate"`
-	Name          string        `json:"name"`
-	Scale         uint64        `json:"scale"`
-	LaunchConfig  *LaunchConfig `json:"launchConfig"`
-}
-
-func NewClientForConfig(config *Config) (*Client, error) {
+// NewClientForConfig creates a new rancher REST client
+func NewClientForConfig(config *Config, c HTTPClient) (*Client, error) {
 	url := fmt.Sprintf("%s/stacks?name=%s", config.CattleURL, config.FunctionsStackName)
-
-	c := http.Client{
-		Timeout: time.Second * 2, // Maximum of 2 secs
-	}
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -65,36 +33,33 @@ func NewClientForConfig(config *Config) (*Client, error) {
 		log.Fatal(readErr)
 	}
 
-	var objmap map[string]*json.RawMessage
-	objmapErr := json.Unmarshal(body, &objmap)
-	if objmapErr != nil {
-		log.Fatal(objmapErr)
-	}
-
-	stacks := make([]Stack, 0)
-	jsonErr := json.Unmarshal(*objmap["data"], &stacks)
+	var stackResp StackResponse
+	jsonErr := json.Unmarshal(body, &stackResp)
 	if jsonErr != nil {
 		log.Fatal(jsonErr)
 	}
 
-	if len(stacks) == 0 {
+	if len(stackResp.Data) == 0 {
 		log.Fatal(fmt.Errorf("No stack named %s found", config.FunctionsStackName))
 	}
-	stack := stacks[0]
+	stack := stackResp.Data[0]
 
 	client := Client{
+		http:             c,
 		config:           config,
 		functionsStackID: stack.ID,
 	}
 	return &client, nil
 }
 
+// ListServices lists rancher services inside the specified stack (set in config)
 func (c *Client) ListServices() ([]Service, error) {
 	url := fmt.Sprintf("%s/stacks/%s/services", c.config.CattleURL, c.functionsStackID)
 
 	return c.listServicesInternal(url)
 }
 
+// FindServiceByName finds a service based on its name
 func (c *Client) FindServiceByName(name string) (*Service, error) {
 	url := fmt.Sprintf("%s/services?name=%s", c.config.CattleURL, name)
 	services, err := c.listServicesInternal(url)
@@ -109,43 +74,45 @@ func (c *Client) FindServiceByName(name string) (*Service, error) {
 	return &services[0], nil
 }
 
-func (c *Client) listServicesInternal(url string) ([]Service, error) {
-	client := http.Client{
-		Timeout: time.Second * 2, // Maximum of 2 secs
+func (c *Client) execute(method, urlStr string, body io.Reader) ([]byte, error) {
+	req, reqErr := http.NewRequest(method, urlStr, body)
+	if reqErr != nil {
+		return nil, reqErr
 	}
-
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+	req.Header.Add("Content-Type", "application/json")
 	req.SetBasicAuth(c.config.CattleAccessKey, c.config.CattleSecretKey)
 
-	res, getErr := client.Do(req)
-	if getErr != nil {
-		log.Fatal(getErr)
+	resp, doErr := c.http.Do(req)
+	if doErr != nil {
+		return nil, doErr
+	}
+	defer resp.Body.Close()
+
+	fmt.Println("response Status:", resp.Status)
+	fmt.Println("response Headers:", resp.Header)
+
+	return ioutil.ReadAll(resp.Body)
+
+}
+
+func (c *Client) listServicesInternal(url string) ([]Service, error) {
+
+	body, exeErr := c.execute(http.MethodGet, url, nil)
+	if exeErr != nil {
+		log.Fatal(exeErr)
 	}
 
-	body, readErr := ioutil.ReadAll(res.Body)
-	if readErr != nil {
-		log.Fatal(readErr)
-	}
-
-	var objmap map[string]*json.RawMessage
-	objmapErr := json.Unmarshal(body, &objmap)
-	if objmapErr != nil {
-		log.Fatal(objmapErr)
-	}
-
-	services := make([]Service, 0)
-	jsonErr := json.Unmarshal(*objmap["data"], &services)
+	var serviceResp ServiceResponse
+	jsonErr := json.Unmarshal(body, &serviceResp)
 	if jsonErr != nil {
 		log.Fatal(jsonErr)
 	}
 
-	return services, nil
+	return serviceResp.Data, nil
 
 }
 
+// CreateService creates a service inside rancher
 func (c *Client) CreateService(spec *Service) (*Service, error) {
 	url := fmt.Sprintf("%s/services", c.config.CattleURL)
 
@@ -155,26 +122,10 @@ func (c *Client) CreateService(spec *Service) (*Service, error) {
 		log.Fatal(jsonErr)
 	}
 
-	req, reqErr := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonValue))
-	if reqErr != nil {
-		log.Fatal(reqErr)
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.SetBasicAuth(c.config.CattleAccessKey, c.config.CattleSecretKey)
-
-	client := &http.Client{}
-	resp, postErr := client.Do(req)
-	if postErr != nil {
-		log.Fatal(postErr)
-	}
-	defer resp.Body.Close()
-
-	fmt.Println("response Status:", resp.Status)
-	fmt.Println("response Headers:", resp.Header)
-
-	body, readErr := ioutil.ReadAll(resp.Body)
-	if readErr != nil {
-		log.Fatal(readErr)
+	// TODO what happens if create service that already exists
+	body, exeErr := c.execute(http.MethodPost, url, bytes.NewBuffer(jsonValue))
+	if exeErr != nil {
+		log.Fatal(exeErr)
 	}
 	fmt.Println("response Body:", string(body))
 
@@ -186,27 +137,11 @@ func (c *Client) CreateService(spec *Service) (*Service, error) {
 	return &service, nil
 }
 
+// DeleteService deletes the specified service in rancher
 func (c *Client) DeleteService(spec *Service) (*Service, error) {
 	url := fmt.Sprintf("%s/services/%s", c.config.CattleURL, spec.ID)
 
-	req, reqErr := http.NewRequest(http.MethodDelete, url, nil)
-	if reqErr != nil {
-		log.Fatal(reqErr)
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.SetBasicAuth(c.config.CattleAccessKey, c.config.CattleSecretKey)
-
-	client := &http.Client{}
-	resp, delErr := client.Do(req)
-	if delErr != nil {
-		log.Fatal(delErr)
-	}
-	defer resp.Body.Close()
-
-	fmt.Println("response Status:", resp.Status)
-	fmt.Println("response Headers:", resp.Header)
-
-	body, readErr := ioutil.ReadAll(resp.Body)
+	body, readErr := c.execute(http.MethodDelete, url, nil)
 	if readErr != nil {
 		log.Fatal(readErr)
 	}
@@ -220,6 +155,7 @@ func (c *Client) DeleteService(spec *Service) (*Service, error) {
 	return &service, nil
 }
 
+// UpgradeService upgrades the specified service in rancher
 func (c *Client) UpgradeService(spec *Service) (*Service, error) {
 	url := fmt.Sprintf("%s/services/%s", c.config.CattleURL, spec.ID)
 
@@ -228,24 +164,7 @@ func (c *Client) UpgradeService(spec *Service) (*Service, error) {
 		log.Fatal(jsonErr)
 	}
 
-	req, reqErr := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonValue))
-	if reqErr != nil {
-		log.Fatal(reqErr)
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.SetBasicAuth(c.config.CattleAccessKey, c.config.CattleSecretKey)
-
-	client := &http.Client{}
-	resp, putErr := client.Do(req)
-	if putErr != nil {
-		log.Fatal(putErr)
-	}
-	defer resp.Body.Close()
-
-	fmt.Println("response Status:", resp.Status)
-	fmt.Println("response Headers:", resp.Header)
-
-	body, readErr := ioutil.ReadAll(resp.Body)
+	body, readErr := c.execute(http.MethodPut, url, bytes.NewBuffer(jsonValue))
 	if readErr != nil {
 		log.Fatal(readErr)
 	}

@@ -14,12 +14,10 @@ import (
 	"time"
 
 	"io/ioutil"
-
-	"github.com/gorilla/mux"
 )
 
 // MakeProxy creates a proxy for HTTP web requests which can be routed to a function.
-func MakeProxy(stackName string) http.HandlerFunc {
+func MakeProxy(stackName string) VarsHandler {
 	proxyClient := http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
@@ -34,12 +32,11 @@ func MakeProxy(stackName string) http.HandlerFunc {
 		},
 	}
 
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request, vars map[string]string) {
 		defer r.Body.Close()
 
 		if r.Method == "POST" {
 
-			vars := mux.Vars(r)
 			service := vars["name"]
 
 			stamp := strconv.FormatInt(time.Now().Unix(), 10)

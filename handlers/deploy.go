@@ -27,8 +27,8 @@ func ValidateDeployRequest(request *requests.CreateFunctionRequest) error {
 }
 
 // MakeDeployHandler creates a handler to create new functions in the cluster
-func MakeDeployHandler(client *rancher.Client) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func MakeDeployHandler(client *rancher.Client) VarsHandler {
+	return func(w http.ResponseWriter, r *http.Request, vars map[string]string) {
 
 		defer r.Body.Close()
 
@@ -70,13 +70,16 @@ func makeServiceSpec(request requests.CreateFunctionRequest) *rancher.Service {
 	if envVars == nil {
 		envVars = make(map[string]string)
 	}
-	envVars["fprocess"] = request.EnvProcess
+
+	if len(request.EnvProcess) > 0 {
+		envVars["fprocess"] = request.EnvProcess
+	}
 
 	restartPolicy := make(map[string]string)
 	restartPolicy["name"] = "always"
 
 	labels := make(map[string]string)
-	labels["faas_function"] = request.Service
+	labels[FaasFunctionLabel] = request.Service
 	labels["io.rancher.container.pull_image"] = "always"
 
 	launchConfig := &rancher.LaunchConfig{
