@@ -4,13 +4,12 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/alexellis/faas-provider"
+	bootTypes "github.com/alexellis/faas-provider/types"
 	"github.com/kenfdev/faas-rancher/handlers"
 	"github.com/kenfdev/faas-rancher/rancher"
 )
@@ -45,30 +44,22 @@ func main() {
 		panic(err.Error())
 	}
 
-	r := mux.NewRouter()
-
-	r.HandleFunc("/system/functions", handlers.MakeFunctionReader(rancherClient).ServeHTTP).Methods("GET")
-	r.HandleFunc("/system/functions", handlers.MakeDeployHandler(rancherClient).ServeHTTP).Methods("POST")
-	r.HandleFunc("/system/functions", handlers.MakeDeleteHandler(rancherClient).ServeHTTP).Methods("DELETE")
-
-	r.HandleFunc("/system/function/{name:[-a-zA-Z_0-9]+}", handlers.MakeReplicaReader(rancherClient).ServeHTTP).Methods("GET")
-	r.HandleFunc("/system/scale-function/{name:[-a-zA-Z_0-9]+}", handlers.MakeReplicaUpdater(rancherClient).ServeHTTP).Methods("POST")
-
-	functionProxy := handlers.MakeProxy(config.FunctionsStackName).ServeHTTP
-	r.HandleFunc("/function/{name:[-a-zA-Z_0-9]+}", functionProxy)
-	r.HandleFunc("/function/{name:[-a-zA-Z_0-9]+}/", functionProxy)
-
-	readTimeout := 8 * time.Second
-	writeTimeout := 8 * time.Second
-	tcpPort := 8080
-
-	s := &http.Server{
-		Addr:           fmt.Sprintf(":%d", tcpPort),
-		ReadTimeout:    readTimeout,
-		WriteTimeout:   writeTimeout,
-		MaxHeaderBytes: http.DefaultMaxHeaderBytes, // 1MB - can be overridden by setting Server.MaxHeaderBytes.
-		Handler:        r,
+	bootstrapHandlers := bootTypes.FaaSHandlers{
+		FunctionProxy:  handlers.MakeProxy(config.FunctionsStackName).ServeHTTP,
+		DeleteHandler:  handlers.MakeDeleteHandler(rancherClient).ServeHTTP,
+		DeployHandler:  handlers.MakeDeployHandler(rancherClient).ServeHTTP,
+		FunctionReader: handlers.MakeFunctionReader(rancherClient).ServeHTTP,
+		ReplicaReader:  handlers.MakeReplicaReader(rancherClient).ServeHTTP,
+		ReplicaUpdater: handlers.MakeReplicaUpdater(rancherClient).ServeHTTP,
+	}
+	var port int
+	port = 8080
+	bootstrapConfig := bootTypes.FaaSConfig{
+		ReadTimeout:  time.Second * 8,
+		WriteTimeout: time.Second * 8,
+		TCPPort:      &port,
 	}
 
-	log.Fatal(s.ListenAndServe())
+	bootstrap.Serve(&bootstrapHandlers, &bootstrapConfig)
+
 }

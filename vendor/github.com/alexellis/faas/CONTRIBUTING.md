@@ -2,15 +2,36 @@
 
 ### Guidelines
 
-Here are a few guidelines for contributing:
+Guidelines for contributing.
 
-* If you would like to contribute to the codebase **please raise an issue to propose the change** and fill out the whole template.
+**I've found a typo**
 
-* If you have found a bug please raise an issue and fill out the whole template.
-* Don't raise PRs for typos, these aren't necessary - just raise an Issue
-* If the documentation can be improved / translated etc please raise an issue to discuss. 
+* A Pull Request is not necessary. Raise an [Issue](https://github.com/alexellis/faas/issues) and we'll fix it as soon as we can. 
 
-* Please always provide a summary of what you changed, how you did it and how it can be tested.
+**I have a [great] idea**
+
+The OpenFaaS maintainers would like to make OpenFaaS the best it can be and welcome new contributions that align with the project's goals. Our time is limited so we'd like to make sure we agree on the proposed work before you spend time doing it. Saying "no" is hard which is why we'd rather say "yes" ahead of time.
+
+What makes a good proposal?
+
+* Brief summary including motivation/context
+* Any design changes
+* Pros + Cons
+* Effort required
+* Mock-up screenshots or examples of how the CLI would work
+
+**Paperwork for Pull Requests**
+
+Please read this whole guide and make sure you agree to our DCO agreement (included below):
+
+* Sign-off your commits
+* Complete the whole template for issues and pull requests
+* Always give instructions for testing
+ * Give us CLI commands and output or screenshots where you can 
+
+**I have a question, a suggestion or need help**
+
+Please raise an Issue or email alex@openfaas.com for an invitation to our Slack community.
 
 ### Community
 
@@ -26,7 +47,7 @@ Checkout the [roadmap](https://github.com/alexellis/faas/blob/master/ROADMAP.md)
 
 #### Slack
 
-There is an invite-only Slack community which you are welcome to join to discuss FaaS, IoT and Raspberry Pi projects. All that is needed is an email address. Get in touch with Alex Ellis.
+There is an Slack community which you are welcome to join to discuss FaaS, IoT and Raspberry Pi projects. Ping [Alex Ellis](https://github.com/alexellis) with your email address so that an invite can be sent out.
 
 ### License
 
