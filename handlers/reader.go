@@ -41,6 +41,11 @@ func getServiceList(client *rancher.Client) ([]requests.Function, error) {
 	}
 
 	for _, service := range services {
+		if !service.IsActive() {
+			// ignore inactive services
+			continue
+		}
+
 		if _, ok := service.LaunchConfig.Labels[FaasFunctionLabel]; ok {
 			// filter to faas function services
 			function := requests.Function{
