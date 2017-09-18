@@ -13,6 +13,7 @@ import (
 
 	"github.com/alexellis/faas/gateway/requests"
 	"github.com/kenfdev/faas-rancher/rancher"
+	"github.com/rancher/go-rancher/v2"
 )
 
 // ValidateDeployRequest validates that the service name is valid for Kubernetes
@@ -27,7 +28,7 @@ func ValidateDeployRequest(request *requests.CreateFunctionRequest) error {
 }
 
 // MakeDeployHandler creates a handler to create new functions in the cluster
-func MakeDeployHandler(client *rancher.Client) VarsHandler {
+func MakeDeployHandler(client rancher.BridgeClient) VarsHandler {
 	return func(w http.ResponseWriter, r *http.Request, vars map[string]string) {
 
 		defer r.Body.Close()
@@ -65,30 +66,28 @@ func MakeDeployHandler(client *rancher.Client) VarsHandler {
 	}
 }
 
-func makeServiceSpec(request requests.CreateFunctionRequest) *rancher.Service {
-	envVars := request.EnvVars
-	if envVars == nil {
-		envVars = make(map[string]string)
+func makeServiceSpec(request requests.CreateFunctionRequest) *client.Service {
+
+	envVars := make(map[string]interface{})
+	for k, v := range request.EnvVars {
+		envVars[k] = v
 	}
 
 	if len(request.EnvProcess) > 0 {
 		envVars["fprocess"] = request.EnvProcess
 	}
 
-	restartPolicy := make(map[string]string)
-	restartPolicy["name"] = "always"
-
-	labels := make(map[string]string)
+	labels := make(map[string]interface{})
 	labels[FaasFunctionLabel] = request.Service
 	labels["io.rancher.container.pull_image"] = "always"
 
-	launchConfig := &rancher.LaunchConfig{
-		Environment:   envVars,
-		RestartPolicy: restartPolicy,
-		ImageUUID:     "docker:" + request.Image, // not sure if it's ok to just prefix with 'docker:'
-		Labels:        labels,
+	launchConfig := &client.LaunchConfig{
+		Environment: envVars,
+		ImageUuid:   "docker:" + request.Image, // not sure if it's ok to just prefix with 'docker:'
+		Labels:      labels,
 	}
-	serviceSpec := &rancher.Service{
+
+	serviceSpec := &client.Service{
 		Name:          request.Service,
 		Scale:         1,
 		StartOnCreate: true,

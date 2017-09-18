@@ -12,7 +12,7 @@ import (
 )
 
 // MakeFunctionReader handler for reading functions deployed in the cluster as deployments.
-func MakeFunctionReader(client *rancher.Client) VarsHandler {
+func MakeFunctionReader(client rancher.BridgeClient) VarsHandler {
 	return func(w http.ResponseWriter, r *http.Request, vars map[string]string) {
 
 		functions, err := getServiceList(client)
@@ -27,12 +27,12 @@ func MakeFunctionReader(client *rancher.Client) VarsHandler {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusOK)
 		w.Write(functionBytes)
 	}
 }
 
-func getServiceList(client *rancher.Client) ([]requests.Function, error) {
+func getServiceList(client rancher.BridgeClient) ([]requests.Function, error) {
 	functions := []requests.Function{}
 
 	services, err := client.ListServices()
@@ -41,17 +41,18 @@ func getServiceList(client *rancher.Client) ([]requests.Function, error) {
 	}
 
 	for _, service := range services {
-		if !service.IsActive() {
+		if service.State != "active" {
 			// ignore inactive services
 			continue
 		}
 
 		if _, ok := service.LaunchConfig.Labels[FaasFunctionLabel]; ok {
 			// filter to faas function services
+			replicas := uint64(service.Scale)
 			function := requests.Function{
 				Name:            service.Name,
-				Replicas:        service.Scale,
-				Image:           service.LaunchConfig.ImageUUID,
+				Replicas:        replicas,
+				Image:           service.LaunchConfig.ImageUuid,
 				InvocationCount: 0,
 			}
 			functions = append(functions, function)

@@ -13,7 +13,7 @@ import (
 )
 
 // MakeDeleteHandler delete a function
-func MakeDeleteHandler(client *rancher.Client) VarsHandler {
+func MakeDeleteHandler(client rancher.BridgeClient) VarsHandler {
 	return func(w http.ResponseWriter, r *http.Request, vars map[string]string) {
 
 		defer r.Body.Close()
@@ -35,11 +35,14 @@ func MakeDeleteHandler(client *rancher.Client) VarsHandler {
 		// This makes sure we don't delete non-labelled deployments
 		service, findErr := client.FindServiceByName(request.FunctionName)
 		if findErr != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		} else if service == nil {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		_, delErr := client.DeleteService(service)
+		delErr := client.DeleteService(service)
 		if delErr != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return

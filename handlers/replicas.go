@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/alexellis/faas/gateway/requests"
 	"github.com/kenfdev/faas-rancher/rancher"
@@ -15,7 +16,7 @@ import (
 )
 
 // MakeReplicaUpdater updates desired count of replicas
-func MakeReplicaUpdater(client *rancher.Client) VarsHandler {
+func MakeReplicaUpdater(client rancher.BridgeClient) VarsHandler {
 	return func(w http.ResponseWriter, r *http.Request, vars map[string]string) {
 
 		log.Println("Update replicas")
@@ -44,8 +45,9 @@ func MakeReplicaUpdater(client *rancher.Client) VarsHandler {
 			return
 		}
 
-		service.Scale = req.Replicas
-		_, upgradeErr := client.UpgradeService(service)
+		updates := make(map[string]string)
+		updates["scale"] = strconv.FormatInt(req.Replicas, 10)
+		_, upgradeErr := client.UpdateService(service, updates)
 		if upgradeErr != nil {
 			w.WriteHeader(500)
 			w.Write([]byte("Unable to update function deployment " + functionName))
@@ -57,7 +59,7 @@ func MakeReplicaUpdater(client *rancher.Client) VarsHandler {
 }
 
 // MakeReplicaReader reads the amount of replicas for a deployment
-func MakeReplicaReader(client *rancher.Client) VarsHandler {
+func MakeReplicaReader(client rancher.BridgeClient) VarsHandler {
 	return func(w http.ResponseWriter, r *http.Request, vars map[string]string) {
 
 		log.Println("Read replicas")

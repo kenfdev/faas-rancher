@@ -4,6 +4,8 @@
 package main
 
 import (
+	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -36,16 +38,27 @@ func main() {
 	}
 
 	// create the rancher REST client
-	httpClient := http.Client{
-		Timeout: time.Second * TimeoutSeconds,
-	}
-	rancherClient, err := rancher.NewClientForConfig(config, &httpClient)
+	rancherClient, err := rancher.NewClientForConfig(config)
 	if err != nil {
 		panic(err.Error())
 	}
+	fmt.Println("Created Rancher Client")
 
+	proxyClient := http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   3 * time.Second,
+				KeepAlive: 0,
+			}).DialContext,
+			MaxIdleConns:          1,
+			DisableKeepAlives:     true,
+			IdleConnTimeout:       120 * time.Millisecond,
+			ExpectContinueTimeout: 1500 * time.Millisecond,
+		},
+	}
 	bootstrapHandlers := bootTypes.FaaSHandlers{
-		FunctionProxy:  handlers.MakeProxy(config.FunctionsStackName).ServeHTTP,
+		FunctionProxy:  handlers.MakeProxy(&proxyClient, config.FunctionsStackName).ServeHTTP,
 		DeleteHandler:  handlers.MakeDeleteHandler(rancherClient).ServeHTTP,
 		DeployHandler:  handlers.MakeDeployHandler(rancherClient).ServeHTTP,
 		FunctionReader: handlers.MakeFunctionReader(rancherClient).ServeHTTP,
