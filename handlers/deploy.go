@@ -83,7 +83,7 @@ func makeServiceSpec(request requests.CreateFunctionRequest) *client.Service {
 
 	launchConfig := &client.LaunchConfig{
 		Environment: envVars,
-		ImageUuid:   "docker:" + request.Image, // not sure if it's ok to just prefix with 'docker:'
+		Image:       request.Image,
 		Labels:      labels,
 	}
 
