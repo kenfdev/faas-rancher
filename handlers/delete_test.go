@@ -11,7 +11,7 @@ import (
 
 	"github.com/kenfdev/faas-rancher/mocks"
 	"github.com/kenfdev/faas/gateway/requests"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -11,7 +11,7 @@ import (
 
 	"github.com/kenfdev/faas-rancher/mocks"
 	"github.com/kenfdev/faas/gateway/requests"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -96,7 +96,7 @@ func Test_MakeFunctionReader_Get_Service_List_Has_Active_Services(t *testing.T) 
 		Scale: 1,
 		LaunchConfig: &client.LaunchConfig{
 			ImageUuid: "some/docker/image",
-			Labels: map[string]interface{}{
+			Labels: map[string]string{
 				"faas_function": "some_function",
 			},
 		},
@@ -155,7 +155,7 @@ func Test_MakeFunctionReader_Get_Service_List_Has_Active_Services_But_Not_Labele
 		LaunchConfig: &client.LaunchConfig{
 			ImageUuid: "some/docker/image",
 			// no label to indicate faas function
-			Labels: map[string]interface{}{},
+			Labels: map[string]string{},
 		},
 	}
 

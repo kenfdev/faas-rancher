@@ -13,7 +13,7 @@ import (
 
 	"github.com/kenfdev/faas-rancher/mocks"
 	"github.com/kenfdev/faas/gateway/requests"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,7 +44,6 @@ func Test_MakeDeployHandler_Create_Service_Success(t *testing.T) {
 		mock.MatchedBy(func(s *client.Service) bool {
 			return s.Name == request.Service &&
 				s.Scale == 1 &&
-				s.StartOnCreate == true &&
 				s.LaunchConfig.Environment["SOME_ENV"] == request.EnvVars["SOME_ENV"] &&
 				s.LaunchConfig.Environment["fprocess"] == request.EnvProcess &&
 				s.LaunchConfig.Labels["faas_function"] == request.Service

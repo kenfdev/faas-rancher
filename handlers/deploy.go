@@ -13,7 +13,7 @@ import (
 
 	"github.com/alexellis/faas/gateway/requests"
 	"github.com/kenfdev/faas-rancher/rancher"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
 // ValidateDeployRequest validates that the service name is valid for Kubernetes
@@ -68,7 +68,7 @@ func MakeDeployHandler(client rancher.BridgeClient) VarsHandler {
 
 func makeServiceSpec(request requests.CreateFunctionRequest) *client.Service {
 
-	envVars := make(map[string]interface{})
+	envVars := make(map[string]string)
 	for k, v := range request.EnvVars {
 		envVars[k] = v
 	}
@@ -77,7 +77,7 @@ func makeServiceSpec(request requests.CreateFunctionRequest) *client.Service {
 		envVars["fprocess"] = request.EnvProcess
 	}
 
-	labels := make(map[string]interface{})
+	labels := make(map[string]string)
 	labels[FaasFunctionLabel] = request.Service
 	labels["io.rancher.container.pull_image"] = "always"
 
@@ -88,10 +88,9 @@ func makeServiceSpec(request requests.CreateFunctionRequest) *client.Service {
 	}
 
 	serviceSpec := &client.Service{
-		Name:          request.Service,
-		Scale:         1,
-		StartOnCreate: true,
-		LaunchConfig:  launchConfig,
+		Name:         request.Service,
+		Scale:        1,
+		LaunchConfig: launchConfig,
 	}
 
 	return serviceSpec

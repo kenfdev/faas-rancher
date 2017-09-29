@@ -6,7 +6,7 @@ package rancher
 import (
 	"fmt"
 
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
 // BridgeClient is the interface for Rancher API
