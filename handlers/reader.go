@@ -52,7 +52,7 @@ func getServiceList(client rancher.BridgeClient) ([]requests.Function, error) {
 			function := requests.Function{
 				Name:            service.Name,
 				Replicas:        replicas,
-				Image:           service.LaunchConfig.ImageUuid,
+				Image:           service.LaunchConfig.Image,
 				InvocationCount: 0,
 			}
 			functions = append(functions, function)

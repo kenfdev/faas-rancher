@@ -95,7 +95,7 @@ func Test_MakeFunctionReader_Get_Service_List_Has_Active_Services(t *testing.T) 
 		Name:  "SomeFunction",
 		Scale: 1,
 		LaunchConfig: &client.LaunchConfig{
-			ImageUuid: "some/docker/image",
+			Image: "some/docker/image",
 			Labels: map[string]string{
 				"faas_function": "some_function",
 			},
@@ -106,7 +106,7 @@ func Test_MakeFunctionReader_Get_Service_List_Has_Active_Services(t *testing.T) 
 	expectedFunction := requests.Function{
 		Name:            activeService.Name,
 		Replicas:        replicas,
-		Image:           activeService.LaunchConfig.ImageUuid,
+		Image:           activeService.LaunchConfig.Image,
 		InvocationCount: 0,
 	}
 
@@ -153,7 +153,7 @@ func Test_MakeFunctionReader_Get_Service_List_Has_Active_Services_But_Not_Labele
 		Name:  "SomeFunction",
 		Scale: 1,
 		LaunchConfig: &client.LaunchConfig{
-			ImageUuid: "some/docker/image",
+			Image: "some/docker/image",
 			// no label to indicate faas function
 			Labels: map[string]string{},
 		},
