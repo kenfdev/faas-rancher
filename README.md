@@ -1,3 +1,6 @@
+# **DEPRECATED** This repository is deprecated. Please refer https://github.com/openfaas-incubator/faas-rancher
+
+
 faas-rancher
 ===========
 
